@@ -54,6 +54,7 @@ def add_option(s, value):
             print("passing along unknown option: {}".format(s))
             return False
         options[name] = value
+        print("* set {} to {}".format(name, value))
     else:
         c = name_alts.get(s)
         if c is None:
@@ -62,6 +63,8 @@ def add_option(s, value):
             return False
         else:
             options[s] = value
+            print("* set {} to {}".format(s, value))
+
     return True
 
 def main():
@@ -95,7 +98,6 @@ def main():
                 result = add_option(name, value)
                 if not result:
                     passthroughs.append(arg)
-                print("* set {} to {}".format(name, value))
             else:
                 if arg[1:] in delay_args:
                     delayed = arg
@@ -105,7 +107,7 @@ def main():
                         c = arg[skip:sign_i]
                         value = arg[sign_i+1:]
                         name = arg_alts.get(c)
-                        if not add_option(name, True):
+                        if not add_option(name, value):
                             print("* passing along unknown option"
                                   " '{}'".format(arg))
                             passthroughs.append(arg)
@@ -227,7 +229,8 @@ def main():
             extend = int(extend)
         new_w = int(src_w * ratio) + extend*2
         new_h = int(src_h * ratio) + extend*2
-        print("* new size: {}".format((src_w, src_h)))
+        print("* source size: {}".format((src_w, src_h)))
+        print("* new size: {}".format((new_w, new_h)))
         # dst_img = Image.new('RGBA', (new_w, new_h), (0, 0, 0, 0))
         left = (tmp_w - new_w) // 2
         top = (tmp_w - new_h) // 2
