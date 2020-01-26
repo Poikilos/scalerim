@@ -230,7 +230,7 @@ def main():
         new_w = int(src_w * ratio) + extend*2
         new_h = int(src_h * ratio) + extend*2
         print("* source size: {}".format((src_w, src_h)))
-        print("* new size: {}".format((new_w, new_h)))
+        # print("* new size: {}".format((new_w, new_h)))
         # dst_img = Image.new('RGBA', (new_w, new_h), (0, 0, 0, 0))
         left = (tmp_w - new_w) // 2
         top = (tmp_w - new_h) // 2
