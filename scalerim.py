@@ -231,8 +231,8 @@ def main():
         # dst_img = Image.new('RGBA', (new_w, new_h), (0, 0, 0, 0))
         left = (tmp_w - new_w) // 2
         top = (tmp_w - new_h) // 2
-        right = left + new_w - 1
-        bottom = top + new_h - 1
+        right = left + new_w
+        bottom = top + new_h
         print("* temp size: {}x{}".format(tmp_w, tmp_h))
         print("* cropped at: {},{}".format(left, top))
         print("* new size: {}x{}".format(new_w, new_h))
