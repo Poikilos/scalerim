@@ -6,8 +6,13 @@ from PIL import Image
 import tempfile
 import shutil
 import subprocess
-
+resize_bin = "scalerx"
 help_s = """
+This program uses {resize_bin}, but fixes the edge by padding before
+scaling then un-padding the edge after scaling. This allows {resize_bin}
+to accurately detect the edge of the sprite, rather than leaving large
+pixelated parts where the sprite touches the edge.
+
 Options:
 -f (or --force)           Overwrite destination file if present.
 -c (or --command)         Specify what command to use (default scalerx).
@@ -17,9 +22,10 @@ Options:
 
 Examples:
 {cmd} <source> <destination>
+{cmd} <source> <destination> -k4
 {cmd} <source> <destination>
 
-""".format(cmd=sys.argv[0])
+""".format(cmd=sys.argv[0], resize_bin=resize_bin)
 
 def customDie(msg, exit_code=1):
     print("")
@@ -68,6 +74,7 @@ def add_option(s, value):
     return True
 
 def main():
+    global resize_bin
     if len(sys.argv) < 3:
         usage()
         customDie("You must supply a source and destination.")
@@ -79,7 +86,7 @@ def main():
     value = None
 
     passthroughs = []
-
+    delayed = None
     for i in range(1, len(sys.argv)):
         arg = sys.argv[i]
         if arg.startswith("-"):
