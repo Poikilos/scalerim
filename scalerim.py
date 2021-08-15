@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import os
+import distutils.spawn
 
 from PIL import Image
 import tempfile
@@ -27,16 +28,34 @@ Examples:
 
 """.format(cmd=sys.argv[0], resize_bin=resize_bin)
 
+
+def error(msg):
+    sys.stdout.write("{}\n".format(msg))
+
+
 def customDie(msg, exit_code=1):
-    print("")
-    print("ERROR:")
-    print(msg)
-    print("")
-    print("")
+    error("")
+    error("ERROR:")
+    error(msg)
+    error("")
+    error("")
     exit(exit_code)
 
+
 def usage():
-    print(help_s)
+    error(help_s)
+
+
+scalerx_path = distutils.spawn.find_executable("scalerx")
+# ^ Issues on Windows:
+#   - Doesn't use PATHEXT
+#   - Assumes .exe (but doesn't check the "execute" permission)
+# print("path to scalerx: {}".format(result))
+if scalerx_path is None:
+    error("Error: scalerx wasn't found in the path.")
+    error("Run ./deps.sh in the downloaded scalerim repo folder first.")
+    exit(1)
+
 
 name_alts = {}
 name_alts["force"] = "f"
@@ -57,19 +76,19 @@ def add_option(s, value):
         name = arg_alts.get(s)
         if name is None:
             usage()
-            print("passing along unknown option: {}".format(s))
+            error("passing along unknown option: {}".format(s))
             return False
         options[name] = value
-        print("* set {} to {}".format(name, value))
+        error("* set {} to {}".format(name, value))
     else:
         c = name_alts.get(s)
         if c is None:
             usage()
-            print("passing along unknown option: {}".format(s))
+            error("passing along unknown option: {}".format(s))
             return False
         else:
             options[s] = value
-            print("* set {} to {}".format(s, value))
+            error("* set {} to {}".format(s, value))
 
     return True
 
@@ -115,7 +134,7 @@ def main():
                         value = arg[sign_i+1:]
                         name = arg_alts.get(c)
                         if not add_option(name, value):
-                            print("* passing along unknown option"
+                            error("* passing along unknown option"
                                   " '{}'".format(arg))
                             passthroughs.append(arg)
                     else:
@@ -138,7 +157,7 @@ def main():
                 dst = arg
             else:
                 usage()
-                print("* You supplied extra unnamed arguments.\n"
+                error("* You supplied extra unnamed arguments.\n"
                       "  The next program will get the"
                       " {} option.".format(arg))
                 passthroughs.append(arg)
@@ -169,7 +188,7 @@ def main():
         if not force:
             customDie("'{}' already exists, and you didn't specify --force or -f.".format(src))
         else:
-            print("* overwriting '{}' due to {}.".format(dst, force_why))
+            error("* overwriting '{}' due to {}.".format(dst, force_why))
     #     dest_dir = os.path.dirname(os.path.realpath(dst))
     # else:
     #     dest_dir = os.path.dirname(dst)
@@ -187,7 +206,7 @@ def main():
     big_w, big_h = big_img.size
     offset = ((big_w - src_w) // 2, (big_h - src_h) // 2)
     big_img.paste(src_img, offset)
-    print("* saving extended image for input: '{}'".format(big))
+    error("* saving extended image for input: '{}'".format(big))
     big_img.save(big)
     did_exist = False
     if os.path.isfile(dst):
@@ -200,7 +219,7 @@ def main():
         scale_cmd.extend(passthroughs)
     scale_cmd.extend([big, tmp])
     cmd_s = " ".join(scale_cmd)
-    print("* running '{}'...".format(cmd_s))
+    error("* running '{}'...".format(cmd_s))
     ok = False
     try:
         # Examples:
@@ -212,15 +231,15 @@ def main():
         completedprocess = subprocess.run(scale_cmd)
         ok = True
     except Exception as e:
-        print("  ERROR: {}".format(e))
-        print("* Trying the command with os.system...")
+        error("  ERROR: {}".format(e))
+        error("* Trying the command with os.system...")
         try:
             os.system(cmd_s)
             ok = True
         except Exception as e:
-            print("  ERROR: {}".format(e))
+            error("  ERROR: {}".format(e))
     if not os.path.isfile(tmp):
-        print("  ERROR: The command did not result in '{}'".format(tmp))
+        error("  ERROR: The command did not result in '{}'".format(tmp))
         ok = False
     if ok:
         tmp_img = Image.open(tmp, 'r')
@@ -236,30 +255,30 @@ def main():
             extend = int(extend)
         new_w = int(src_w * ratio) + extend*2
         new_h = int(src_h * ratio) + extend*2
-        print("* source size: {}".format((src_w, src_h)))
-        # print("* new size: {}".format((new_w, new_h)))
+        error("* source size: {}".format((src_w, src_h)))
+        # error("* new size: {}".format((new_w, new_h)))
         # dst_img = Image.new('RGBA', (new_w, new_h), (0, 0, 0, 0))
         left = (tmp_w - new_w) // 2
         top = (tmp_w - new_h) // 2
         right = left + new_w
         bottom = top + new_h
-        print("* temp size: {}x{}".format(tmp_w, tmp_h))
-        print("* cropped at: {},{}".format(left, top))
-        print("* new size: {}x{}".format(new_w, new_h))
+        error("* temp size: {}x{}".format(tmp_w, tmp_h))
+        error("* cropped at: {},{}".format(left, top))
+        error("* new size: {}x{}".format(new_w, new_h))
         dst_img = tmp_img.crop((left, top, right, bottom))
         dst_w, dst_h = dst_img.size
-        print("* saving destination '{}'".format(dst))
+        error("* saving destination '{}'".format(dst))
         dst_img.save(dst)
         if os.path.isfile(dst):
             # dst_w, dst_h = dst_img.size
             if not did_exist:
-                print("* '{}' was created.".format(dst))
+                error("* '{}' was created.".format(dst))
             else:
-                print("* check '{}' (was already present;"
+                error("* check '{}' (was already present;"
                       " It is overwritten if the command"
                       " succeeded).".format(dst))
         else:
-            print("  ERROR: the command did not result in"
+            error("  ERROR: the command did not result in"
                   " '{}'".format(dst))
 
     if os.path.isfile(tmp):
