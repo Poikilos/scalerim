@@ -1,2 +1,8 @@
 # scalerim
-Scale with scalerx (from <https://github.com/amadvance/scale2x>, not included) or other custom command without mangling the edge.
+Scale with scalerx (from <https://github.com/amadvance/scale2x>, not included) or another custom command without mangling the edge by using scalerim instead, which preprocesses the image, runs the command, then post-processes the image.
+
+## Scaling Sprites
+When you scale an image with scaler2x (or any other program), there is edge distortion for any pixel(s) that touch the edge. It looks like you are putting a thick layer of paint onto canvas to make a beautiful painting, but every stroke that touches the edge gets sucked in and expands. Essentially, the exact same effect happens due to the math of scaling with most/all scaling algorithms (except perhaps fractal and AI scaling which I have not tested for the issue yet). Scalerim adds just the right amount of pixels to the edge so that after scaling, it automatically crops the image back down, resulting in an image where the edge pixels aren't distorted, and edge-following algorithms follow the edge of the sprite rather than the edge of the image. Rather than a plateau (curve with its middle cut flat), the resulting image has a continuously curved edge there. The resulting image is otherwise pixel-identical to an image scaled without scalerim.
+
+## Non-sprites
+The corrective measure described above doesn't help with images that are not sprites. Regular images are "uncurable," (there is usually slight distortion on the edge that isn't noticeable, at least at high resolutions) unless perhaps some untested scaling method is used. In any case, using this tool in those cases may leave a transparent fringe. This tool is only for sprites.
