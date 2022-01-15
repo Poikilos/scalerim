@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-import sys
-import os
-import distutils.spawn
+"""
+Title: scalerim
+Author: Jake "Poikilos" Gustafson
 
-from PIL import Image
-import tempfile
-import shutil
-import subprocess
-resize_bin = "scalerx"
-help_s = """
+Purpose:
 This program uses {resize_bin}, but fixes the edge by padding before
 scaling then un-padding the edge after scaling. This allows {resize_bin}
 to accurately detect the edge of the sprite, rather than leaving large
-pixelated parts where the sprite touches the edge.
+pixelated parts where the sprite touches the edge. This program is only
+useful for sprites, as the fringe of transparency or rounded corners it
+leaves would be a considered artifacts (glitches) if the image were a
+non-sprite.
 
 Options:
 -f (or --force)           Overwrite destination file if present.
@@ -24,16 +22,28 @@ Options:
 Examples:
 {cmd} <source> <destination>
 {cmd} <source> <destination> -k4
+# ^ The order doesn't matter, except source goes before destination.
 {cmd} <source> <destination>
 
-""".format(cmd=sys.argv[0], resize_bin=resize_bin)
+"""
+from __future__ import absolute_import, division, print_function
+import sys
+import os
+import distutils.spawn
+
+from PIL import Image
+import tempfile
+import shutil
+import subprocess
+resize_bin = "scalerx"
+
 
 
 def error(msg):
-    sys.stdout.write("{}\n".format(msg))
+    sys.stderr.write("{}\n".format(msg))
+    sys.stderr.flush()
 
-
-def customDie(msg, exit_code=1):
+def customExit(msg, exit_code=1):
     error("")
     error("ERROR:")
     error(msg)
@@ -43,7 +53,7 @@ def customDie(msg, exit_code=1):
 
 
 def usage():
-    error(help_s)
+    error(__doc__.format(cmd=sys.argv[0], resize_bin=resize_bin))
 
 
 scalerx_path = distutils.spawn.find_executable("scalerx")
@@ -62,7 +72,7 @@ name_alts["force"] = "f"
 name_alts["command"] = "c"
 name_alts["extend"] = "e"
 
-delay_args = ['k']
+delay_args = ['k', 'command']
 
 arg_alts = {}
 for k, v in name_alts.items():
@@ -94,10 +104,12 @@ def add_option(s, value):
 
 def main():
     global resize_bin
+    '''
     if len(sys.argv) < 3:
         usage()
-        customDie("You must supply a source and destination.")
-
+        customExit("You must supply a source and destination.")
+    '''
+    # ^ The source and destination checks are already further down.
     src = None
     dst = None
     scale = None
@@ -120,10 +132,13 @@ def main():
                 else:
                     name = arg[skip:]
                     value = True
-                delayed = None
-                result = add_option(name, value)
-                if not result:
-                    passthroughs.append(arg)
+                if arg[skip:] in delay_args:
+                    delayed = arg[skip:]
+                else:
+                    delayed = None
+                    result = add_option(name, value)
+                    if not result:
+                        passthroughs.append(arg)
             else:
                 if arg[1:] in delay_args:
                     delayed = arg
@@ -145,10 +160,15 @@ def main():
                         delayed = None
         else:
             if delayed is not None:
-                passthroughs.extend([delayed, arg])
-                name = delayed[1:]
-                if name == 'k':
-                    scale = int(arg)
+                # name = delayed.lstrip("--")
+                name = delayed
+                value = arg
+                error("* setting {} to {}".format(name, value))
+                if not add_option(name, value):
+                    passthroughs.extend([delayed, arg])
+                    name = delayed[1:]
+                    if name == 'k':
+                        scale = int(arg)
                 name = None
                 delayed = None
             elif src is None:
@@ -162,19 +182,30 @@ def main():
                       " {} option.".format(arg))
                 passthroughs.append(arg)
     # if scale is None:
-    #     customDie("You must specify -k or the subcommand scale will"
+    #     customExit("You must specify -k or the subcommand scale will"
     #               " not be understood. Knowing the scale is"
     #               " necessary")
+    # error("passthroughs: {}".format(passthroughs))
+    # error("options: {}".format(options))
+    if '-w' in passthroughs:
+        error("WARNING: -w may produce unexpected results on scalerx or"
+              " other scalers where -w means wrap, if the wrapping is"
+              " used on non-sprites as is its usual use. See readme"
+              " why this program isn't meant for non-sprites.")
+
+    errStr = ""
     if src is None:
-        customDie("You didn't supply a source file (a first unnamed"
-                  " argument)")
+        errStr += ("You didn't supply a source file (a first"
+                   " argument not starting with '-'). ")
     if dst is None:
-        customDie("You didn't supply a destination file (a second unnamed"
-                  " argument)")
+        errStr += ("You didn't supply a destination file (a second"
+                   " argument not starting with '-'). ")
+    if len(errStr) > 0:
+        usage()
+        customExit(errStr)
 
     if not os.path.isfile(src):
-        customDie("'{}' does not exist.".format(src))
-
+        customExit("'{}' does not exist.".format(src))
     force = False
     force_why = None
     if options.get("force") is True:
@@ -186,7 +217,7 @@ def main():
 
     if os.path.isfile(dst):
         if not force:
-            customDie("'{}' already exists, and you didn't specify --force or -f.".format(src))
+            customExit("'{}' already exists, and you didn't specify --force or -f.".format(src))
         else:
             error("* overwriting '{}' due to {}.".format(dst, force_why))
     #     dest_dir = os.path.dirname(os.path.realpath(dst))
@@ -218,7 +249,12 @@ def main():
     if len(passthroughs) > 0:
         scale_cmd.extend(passthroughs)
     scale_cmd.extend([big, tmp])
-    cmd_s = " ".join(scale_cmd)
+    try:
+        cmd_s = " ".join(scale_cmd)
+    except TypeError as ex:
+        error("Bad scale_cmd: {}".format(scale_cmd))
+        error("type(resize_bin): " + type(resize_bin).__name__)
+        raise ex
     error("* running '{}'...".format(cmd_s))
     ok = False
     try:
